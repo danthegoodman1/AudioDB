@@ -2,20 +2,6 @@ import numpy as np
 from scipy.io import wavfile
 from hashlib import sha256
 
-sample_rate, base_data = wavfile.read('f1-drive_short.wav')
-print('sample rate', sample_rate)
-
-
-def extract_peak_frequency(data, sampling_rate):
-    fft_data = np.fft.fft(data)
-    freqs = np.fft.fftfreq(len(data), d=1 / sampling_rate)
-
-    peak_coefficient = np.argmax(np.abs(fft_data))
-    peak_freq = freqs[peak_coefficient]
-
-    return abs(peak_freq * sampling_rate)
-
-
 def extract_peak_frequency_in_range(data, sampling_rate, low, high):
     """
     :param data:
@@ -42,12 +28,14 @@ def extract_peak_frequency_in_range(data, sampling_rate, low, high):
 
 
 # Break into chunks
-ranges = [40, 80, 120, 180, 300, 400, 500, 800]
+ranges = [40, 80, 120, 180, 300, 400]
+spread = 6
 
 
 def get_file_peaks(file_path: str) -> list[tuple[int, int, int, int]]:
+    print("reading file", file_path)
     sample_rate, base_data = wavfile.read(file_path)
-    chunk_size = int(sample_rate / 10)
+    chunk_size = int(sample_rate / 4)
     num_chunks = int(len(base_data) / chunk_size)
     base_chunks = []
     for i in range(num_chunks - 1):
@@ -104,35 +92,58 @@ def hash_peaks(peaks: list[tuple[int, int]], spread: int, min_time_delta: int = 
 
 
 base_peaks = get_file_peaks('f1-drive_short.wav')
-base_hashes = hash_peaks(base_peaks, 6)
-print(base_hashes[:10])
-print(len(base_hashes))
+base_hashes = hash_peaks(base_peaks, spread)
+print("total hashes:", len(base_hashes))
 base_hash_list = list(map(lambda x: x[0], base_hashes))
 
 # Compare a small slice
-small_peaks = get_file_peaks('f1-drive_short-slice.wav')
-small_hashes = hash_peaks(small_peaks, 6)
-print(small_hashes[:10])
-print(len(small_hashes))
+small_peaks = get_file_peaks('f1-drive_short-15.wav')
+small_hashes = hash_peaks(small_peaks, spread)
+print("total hashes:", len(small_hashes))
 small_hash_list = list(map(lambda x: x[0], small_hashes))
 
 matching = 0
-for hash in small_hash_list:
-    if hash in base_hash_list:
+for h in small_hash_list:
+    if h in base_hash_list:
+        print(h, "found at", small_hash_list.index(h), "and base", base_hash_list.index(h))
         matching += 1
 
 print("small match:", float(matching) / float(len(small_hashes)))
 
 # Compare an external recording
-external_peaks = get_file_peaks('laptop-rec-bg-noise.wav')
-external_hashes = hash_peaks(external_peaks, 6)
-print(external_hashes[:10])
-print(len(external_hashes))
+external_peaks = get_file_peaks('laptop-rec.wav')
+external_hashes = hash_peaks(external_peaks, spread)
+print("total hashes:", len(external_hashes))
 external_hash_list = list(map(lambda x: x[0], external_hashes))
 
 matching = 0
-for hash in external_hash_list:
-    if hash in base_hash_list:
+for h in external_hash_list:
+    if h in base_hash_list:
         matching += 1
 
 print("external match:", float(matching) / float(len(external_hashes)))
+
+external_peaks = get_file_peaks('laptop-rec-bg-noise.wav')
+external_hashes = hash_peaks(external_peaks, spread)
+print("total hashes:", len(external_hashes))
+external_hash_list = list(map(lambda x: x[0], external_hashes))
+
+matching = 0
+for h in external_hash_list:
+    if h in base_hash_list:
+        matching += 1
+
+print("external recording with background noise match:", float(matching) / float(len(external_hashes)))
+
+other_peaks = get_file_peaks('other-audio.wav')
+other_hashes = hash_peaks(other_peaks, spread)
+print("total hashes:", len(other_hashes))
+other_hash_list = list(map(lambda x: x[0], other_hashes))
+
+matching = 0
+for h in other_hash_list:
+    if h in base_hash_list:
+        # print(h, "found at", other_hash_list.index(h), "and base", base_hash_list.index(h))
+        matching += 1
+
+print("other audio noise match:", float(matching) / float(len(other_hashes)))
