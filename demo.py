@@ -2,6 +2,9 @@ import numpy as np
 from scipy.io import wavfile
 from hashlib import sha256
 
+import matplotlib.pyplot as plt
+from scipy.signal import spectrogram
+
 def extract_peak_frequency_in_range(data, sampling_rate, low, high):
     """
     :param data:
@@ -28,8 +31,8 @@ def extract_peak_frequency_in_range(data, sampling_rate, low, high):
 
 
 # Break into chunks
-ranges = [40, 80, 120, 180, 300, 400]
-spread = 6
+ranges = [40, 80, 120, 180, 300, 600, 1000]
+spread = 10
 
 
 def get_file_peaks(file_path: str) -> list[tuple[int, int, int, int]]:
@@ -56,6 +59,36 @@ def get_file_peaks(file_path: str) -> list[tuple[int, int, int, int]]:
             peaks.append((fuz_peak, offset + chunk_size * chunk_i, ranges[i], ranges[i + 1]))
 
     return peaks
+
+
+def plot_file_with_peaks(file_path: str):
+
+    # Get peaks and data
+    peaks = get_file_peaks(file_path)
+    sample_rate, base_data = wavfile.read(file_path)
+
+    # Compute the spectrogram of the audio data
+    f, t, Sxx = spectrogram(base_data, sample_rate)
+
+    # Create a new figure with specified size
+    plt.figure(figsize=(12, 3))
+
+    # Plot the spectrogram
+    plt.pcolormesh(t, f, 10 * np.log10(Sxx))
+    plt.ylabel('Frequency [Hz]')
+    plt.xlabel('Time [s]')
+    plt.ylim(0, 1000)
+    plt.xlim(t.min(), t.max())  # fix weird white gap with scatter plot
+
+    plt.savefig('before-peaks.png', dpi=300, bbox_inches='tight')
+    for peak in peaks:
+        plt.scatter(peak[1] / sample_rate, peak[0], color='r', s=25) # converting samples to seconds for the x coordinate
+
+    # Save the figure to a file before displaying it.
+    plt.savefig('with-peaks.png', dpi=300, bbox_inches='tight')
+
+
+plot_file_with_peaks("f1-drive_short-slice.wav")
 
 
 def hash_peaks(peaks: list[tuple[int, int]], spread: int, min_time_delta: int = 1) -> list[tuple[str, int]]:
@@ -98,6 +131,7 @@ def match_rate(base: list[tuple[str, int]], comp: list[tuple[str, int]]) -> floa
             # save all the matching base chunks
             matching_base_chunks.append(base[base_index])
             matching_comp_chunks.append(h)
+
     return float(len(matching_base_chunks)) / float(len(comp))  # with this, i get far too high matches on the other
     # audio file
 
