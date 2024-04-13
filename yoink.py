@@ -1,7 +1,8 @@
 import fnmatch
 import os
 from hashlib import sha1
-from typing import List, Tuple
+from itertools import groupby
+from typing import List, Tuple, Dict
 
 import numpy as np
 from pydub import AudioSegment
@@ -379,7 +380,7 @@ def match_rate(base: list[tuple[str, int]], comp: list[tuple[str, int]]) -> floa
         base_index = next((idx for (idx, b) in enumerate(base) if b[0] == c[0]), -1)
         if base_index > -1:
             # save all the matching base chunks
-            print(f"matching {c[0]} at {c[1]} to {base_index}")
+            # print(f"matching {c[0]} at {c[1]} to {base_index}")
             matching_base_chunks.append(base[base_index])
             matching_comp_chunks.append(c)
 
@@ -396,8 +397,69 @@ def match_rate(base: list[tuple[str, int]], comp: list[tuple[str, int]]) -> floa
 
     return matching_chunks / float(len(comp))
 
-other_fings = get_file_fingerprints('f1-drive_short-slice.wav')
+# def align_matches(self, matches: List[Tuple[int, int]], dedup_hashes: Dict[str, int], queried_hashes: int,
+#                   topn: int = TOPN) -> List[Dict[str, any]]:
+#     """
+#     Finds hash matches that align in time with other matches and finds
+#     consensus about which hashes are "true" signal from the audio.
+#
+#     :param matches: matches from the database
+#     :param dedup_hashes: dictionary containing the hashes matched without duplicates for each song
+#     (key is the song id).
+#     :param queried_hashes: amount of hashes sent for matching against the db
+#     :param topn: number of results being returned back.
+#     :return: a list of dictionaries (based on topn) with match information.
+#     """
+#     # count offset occurrences per song and keep only the maximum ones.
+#     sorted_matches = sorted(matches, key=lambda m: (m[0], m[1]))
+#     counts = [(*key, len(list(group))) for key, group in groupby(sorted_matches, key=lambda m: (m[0], m[1]))]
+#     songs_matches = sorted(
+#         [max(list(group), key=lambda g: g[2]) for key, group in groupby(counts, key=lambda count: count[0])],
+#         key=lambda count: count[2], reverse=True
+#     )
+#
+#     songs_result = []
+#     for song_id, offset, _ in songs_matches[0:topn]:  # consider topn elements in the result
+#         song = self.db.get_song_by_id(song_id)
+#
+#         song_name = song.get(SONG_NAME, None)
+#         song_hashes = song.get(FIELD_TOTAL_HASHES, None)
+#         nseconds = round(float(offset) / DEFAULT_FS * DEFAULT_WINDOW_SIZE * DEFAULT_OVERLAP_RATIO, 5)
+#         hashes_matched = dedup_hashes[song_id]
+#
+#         song = {
+#             SONG_ID: song_id,
+#             SONG_NAME: song_name.encode("utf8"),
+#             INPUT_HASHES: queried_hashes,
+#             FINGERPRINTED_HASHES: song_hashes,
+#             HASHES_MATCHED: hashes_matched,
+#             # Percentage regarding hashes matched vs hashes from the input.
+#             INPUT_CONFIDENCE: round(hashes_matched / queried_hashes, 2),
+#             # Percentage regarding hashes matched vs hashes fingerprinted in the db.
+#             FINGERPRINTED_CONFIDENCE: round(hashes_matched / song_hashes, 2),
+#             OFFSET: offset,
+#             OFFSET_SECS: nseconds,
+#             FIELD_FILE_SHA1: song.get(FIELD_FILE_SHA1, None).encode("utf8")
+#         }
+#
+#         songs_result.append(song)
+#
+#     return songs_result
+
+other_fings = get_file_fingerprints('laptop-rec.wav')
 of = list(other_fings[0])
-of.sort(key=lambda x: x[1])
 of = list(map(lambda x: list(x), of))
 print(match_rate(ff, of))
+
+ff.sort(key=lambda x: (x[1], x[0]))
+of.sort(key=lambda x: (x[1], x[0]))
+print(ff[:10])
+print(of[:10])
+
+indx = []
+for i in range(len(of)):
+    ff_ind = next((idx for (idx, b) in enumerate(ff) if b[0] == of[i][0]), -1)
+    if ff_ind > -1:
+        indx.append(ff_ind)
+print(sorted(indx))
+print(len(of), len(indx))
