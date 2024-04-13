@@ -44,7 +44,6 @@ def get_file_peaks(file_path: str) -> list[tuple[int, int, int, int]]:
     peak, ind = extract_peak_frequency_in_range(base_chunks[1],
                                                 sample_rate, 100,
                                                 500)
-    print(peak, ind + chunk_size, "second chunk peak")  # find the peak of the range, offset from the beginning
 
     # For each chunk, get the peak frequencies from each range
     peaks = []
@@ -90,60 +89,60 @@ def hash_peaks(peaks: list[tuple[int, int]], spread: int, min_time_delta: int = 
 
     return hashes
 
+def match_rate(base: list[tuple[str, int]], comp: list[tuple[str, int]]) -> float:
+    matching_base_chunks = []
+    matching_comp_chunks = []
+    for h in comp:
+        base_index = next((idx for (idx, b) in enumerate(base) if b[0] == h[0]), -1)
+        if base_index > -1:
+            # save all the matching base chunks
+            matching_base_chunks.append(base[base_index])
+            matching_comp_chunks.append(h)
+
+    # For each of them, make sure they are in the right order
+    matching_base_chunks.sort(key=lambda x: x[1])  # sort the matching by time
+    # compare if they are in the same order as the new track
+    matching_chunks = float(0)
+    for i in range(len(matching_comp_chunks)):
+        if matching_comp_chunks[i][0] == matching_base_chunks[i][0]:
+            matching_chunks += 1
+
+    return matching_chunks / float(len(comp))
+
 
 base_peaks = get_file_peaks('f1-drive_short.wav')
 base_hashes = hash_peaks(base_peaks, spread)
 print("total hashes:", len(base_hashes))
 base_hash_list = list(map(lambda x: x[0], base_hashes))
 
-# Compare a small slice
-small_peaks = get_file_peaks('f1-drive_short-15.wav')
+# Compare a small slice (this is small slice of the original file)
+small_peaks = get_file_peaks('f1-drive_short-slice.wav')
 small_hashes = hash_peaks(small_peaks, spread)
 print("total hashes:", len(small_hashes))
 small_hash_list = list(map(lambda x: x[0], small_hashes))
 
-matching = 0
-for h in small_hash_list:
-    if h in base_hash_list:
-        print(h, "found at", small_hash_list.index(h), "and base", base_hash_list.index(h))
-        matching += 1
+print("small match:", match_rate(base_hashes, small_hashes))
 
-print("small match:", float(matching) / float(len(small_hashes)))
-
-# Compare an external recording
+# Compare an external recording (this is an iphone microphone recording the original audio from laptop speakers)
 external_peaks = get_file_peaks('laptop-rec.wav')
 external_hashes = hash_peaks(external_peaks, spread)
 print("total hashes:", len(external_hashes))
 external_hash_list = list(map(lambda x: x[0], external_hashes))
 
-matching = 0
-for h in external_hash_list:
-    if h in base_hash_list:
-        matching += 1
+print("external match:", match_rate(base_hashes, external_hashes))
 
-print("external match:", float(matching) / float(len(external_hashes)))
+# Compare another external recording (same as above with some background noise added)
+more_external_peaks = get_file_peaks('laptop-rec-bg-noise.wav')
+more_external_hashes = hash_peaks(more_external_peaks, spread)
+print("total hashes:", len(more_external_hashes))
+more_external_hash_list = list(map(lambda x: x[0], more_external_hashes))
 
-external_peaks = get_file_peaks('laptop-rec-bg-noise.wav')
-external_hashes = hash_peaks(external_peaks, spread)
-print("total hashes:", len(external_hashes))
-external_hash_list = list(map(lambda x: x[0], external_hashes))
-
-matching = 0
-for h in external_hash_list:
-    if h in base_hash_list:
-        matching += 1
-
-print("external recording with background noise match:", float(matching) / float(len(external_hashes)))
+print("external recording with background noise match:", match_rate(base_hashes, external_hashes))
 
 other_peaks = get_file_peaks('other-audio.wav')
 other_hashes = hash_peaks(other_peaks, spread)
 print("total hashes:", len(other_hashes))
 other_hash_list = list(map(lambda x: x[0], other_hashes))
 
-matching = 0
-for h in other_hash_list:
-    if h in base_hash_list:
-        # print(h, "found at", other_hash_list.index(h), "and base", base_hash_list.index(h))
-        matching += 1
 
-print("other audio noise match:", float(matching) / float(len(other_hashes)))
+print("other audio noise match:", match_rate(base_hashes, other_hashes))
