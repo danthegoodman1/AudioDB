@@ -446,7 +446,7 @@ def match_rate(base: list[tuple[str, int]], comp: list[tuple[str, int]]) -> floa
 #
 #     return songs_result
 
-other_fings = get_file_fingerprints('laptop-rec.wav')
+other_fings = get_file_fingerprints('f1-middle.wav')
 of = list(other_fings[0])
 of = list(map(lambda x: list(x), of))
 print(match_rate(ff, of))
@@ -461,5 +461,5 @@ for i in range(len(of)):
     ff_ind = next((idx for (idx, b) in enumerate(ff) if b[0] == of[i][0]), -1)
     if ff_ind > -1:
         indx.append(ff_ind)
-print(sorted(indx))
+# print(sorted(indx))
 print(len(of), len(indx))
