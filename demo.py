@@ -4,30 +4,36 @@ from hashlib import sha256
 
 import matplotlib.pyplot as plt
 from scipy.signal import spectrogram
+from scipy.fft import fft, fftfreq
+
 
 def extract_peak_frequency_in_range(data, sampling_rate, low, high):
-    """
-    :param data:
-    :param sampling_rate:
-    :param low:
-    :param high:
-    :return: the frequency, and the sample rate index at which it occurred
-    """
-    fft_data = np.fft.fft(data)
-    freqs = np.fft.fftfreq(len(data), d=1 / sampling_rate)  # Ensure frequency calculation respects the sampling rate
+    # Convert the data to float
+    data = data.astype(float)
 
-    # Find indices where the frequency is between low and high
-    indices = np.where((freqs >= low) & (freqs <= high))[0]
+    # Perform FFT on the data
+    fft_data = fft(data)
 
-    # Subset the fft_data and freqs arrays
-    fft_data_subset = fft_data[indices]
-    freqs_subset = freqs[indices]
+    # Calculate the frequencies corresponding to the FFT
+    frequencies = fftfreq(len(data), 1 / sampling_rate)
 
-    # Find the peak in the specified frequency range
-    peak_coefficient = np.argmax(np.abs(fft_data_subset))
-    peak_freq = freqs_subset[peak_coefficient]
+    # Find the indices corresponding to the desired frequency range
+    low_index = np.argmax(frequencies >= low)
+    high_index = np.argmin(frequencies <= high)
 
-    return abs(peak_freq), peak_coefficient  # the index in the sample
+    # Extract the FFT magnitudes within the desired frequency range
+    fft_magnitudes = np.abs(fft_data[low_index:high_index])
+
+    # Find the index of the peak frequency within the range
+    peak_index = np.argmax(fft_magnitudes)
+
+    # Calculate the actual peak frequency
+    peak_frequency = frequencies[low_index + peak_index]
+
+    # Calculate the time offset of the peak frequency
+    peak_time_offset = (low_index + peak_index) / sampling_rate
+
+    return peak_frequency, peak_time_offset
 
 
 # Break into chunks
@@ -86,7 +92,7 @@ def plot_file_with_peaks(file_path: str):
     plt.savefig('with-peaks.png', dpi=300, bbox_inches='tight')
 
 
-plot_file_with_peaks("f1-drive_short.wav")
+# plot_file_with_peaks("f1-drive_short.wav")
 
 
 def hash_peaks(peaks: list[tuple[int, int]], spread: int, min_time_delta: int = 1) -> list[tuple[str, int]]:
@@ -127,19 +133,26 @@ def match_rate(base: list[tuple[str, int]], comp: list[tuple[str, int]]) -> floa
         base_index = next((idx for (idx, b) in enumerate(base) if b[0] == h[0]), -1)
         if base_index > -1:
             # save all the matching base chunks
-            matching_base_chunks.append(base[base_index])
-            matching_comp_chunks.append(h)
+            matching_base_chunks.append(base[base_index][0])
+            matching_comp_chunks.append(h[0])
 
-    return float(len(matching_base_chunks)) / float(len(comp))  # with this, i get far too high matches on the other
+    # return float(len(matching_base_chunks)) / float(len(comp))  # with this, i get far too high matches on the other
     # audio file
 
     # For each of them, make sure they are in the right order
     matching_base_chunks.sort(key=lambda x: x[1])  # sort the matching by time
     # compare if they are in the same order as the new track
     matching_chunks = float(0)
+    last_comp_ind = 0
     for i in range(len(matching_comp_chunks)):
-        if matching_comp_chunks[i][0] == matching_base_chunks[i][0]:
-            matching_chunks += 1
+        # Get the index of the base chunk and ensure it exists in ascending order
+        try:
+            if matching_base_chunks.index(matching_comp_chunks[i]) > last_comp_ind:
+                # print(matching_comp_chunks[i], matching_base_chunks[matching_base_chunks.index(matching_comp_chunks[i])])
+                matching_chunks += 1
+        except:
+            pass
+        last_comp_ind = i
 
     return matching_chunks / float(len(comp))
 
@@ -155,7 +168,7 @@ small_hashes = hash_peaks(small_peaks, spread)
 print("total hashes:", len(small_hashes))
 small_hash_list = list(map(lambda x: x[0], small_hashes))
 
-print("small external match:", match_rate(base_hashes, small_hashes))
+print("small start match:", match_rate(base_hashes, small_hashes))
 
 # Compare an external recording (this is an iphone microphone recording the original audio from laptop speakers)
 external_peaks = get_file_peaks('f1-middle.wav')
@@ -163,7 +176,7 @@ external_hashes = hash_peaks(external_peaks, spread)
 print("total hashes:", len(external_hashes))
 external_hash_list = list(map(lambda x: x[0], external_hashes))
 
-print("middle external match:", match_rate(base_hashes, external_hashes))
+print("middle middle match:", match_rate(base_hashes, external_hashes))
 
 other_peaks = get_file_peaks('other-audio.wav')
 other_hashes = hash_peaks(other_peaks, spread)
