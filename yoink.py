@@ -443,37 +443,39 @@ def match_rate(base: list[tuple[str, int]], comp: list[tuple[str, int]]) -> floa
 #
 #     return songs_result
 
-def get_match(base: set, comp: set) -> float:
+def get_match(base: list[tuple[str, int]], comp: list[tuple[str, int]]) -> float:
     matching_base_chunks = []
     matching_comp_chunks = []
     for h in comp:
         base_index = next((idx for (idx, b) in enumerate(base) if b[0] == h[0]), -1)
         if base_index > -1:
             # save all the matching base chunks
-            matching_base_chunks.append(base[base_index][0])
-            matching_comp_chunks.append(h[0])
+            matching_base_chunks.append(base[base_index])  # hash and time so we can sort
+            matching_comp_chunks.append(h[0])  # just the hash
 
     # return float(len(matching_base_chunks)) / float(len(comp))  # with this, i get far too high matches on the other
     # audio file
 
     # For each of them, make sure they are in the right order
     matching_base_chunks.sort(key=lambda x: x[1])  # sort the matching by time
+    mbc_hashes = list(map(lambda x: x[0], matching_base_chunks))
     # compare if they are in the same order as the new track
     matching_chunks = float(0)
     last_comp_ind = 0
-    for i in range(len(matching_comp_chunks)):
+    for chunk in matching_comp_chunks:
         # Get the index of the base chunk and ensure it exists in ascending order
         try:
-            if matching_base_chunks.index(matching_comp_chunks[i]) > last_comp_ind:
-                # print(matching_comp_chunks[i], matching_base_chunks[matching_base_chunks.index(matching_comp_chunks[i])])
+            mbc_ind = mbc_hashes.index(chunk)
+            if mbc_ind > last_comp_ind:
+                # print(matching_comp_chunks[i], mbc_hashes[mbc_hashes.index(matching_comp_chunks[i])])
                 matching_chunks += 1
+            last_comp_ind = mbc_ind
         except:
             pass
-        last_comp_ind = i
 
     return matching_chunks / float(len(comp))
 
-fings, _ = get_file_fingerprints('f1-drive_short.wav')
+fings, _ = get_file_fingerprints('f1-drive_short-mono.wav')
 # ff = list(fings[0])
 # ff.sort(key=lambda x: x[1])
 # ff = list(map(lambda x: list(x), ff))

@@ -159,7 +159,7 @@ def match_rate(base: list[tuple[str, int]], comp: list[tuple[str, int]]) -> floa
     return matching_chunks / float(len(comp))
 
 
-base_peaks = get_file_peaks('f1-drive_short.wav')
+base_peaks = get_file_peaks('f1-drive_short-mono.wav')
 base_hashes = hash_peaks(base_peaks, spread)
 print("total hashes:", len(base_hashes))
 base_hash_list = list(map(lambda x: x[0], base_hashes))
