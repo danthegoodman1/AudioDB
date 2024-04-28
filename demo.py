@@ -133,8 +133,8 @@ def match_rate(base: list[tuple[str, int]], comp: list[tuple[str, int]]) -> floa
         base_index = next((idx for (idx, b) in enumerate(base) if b[0] == h[0]), -1)
         if base_index > -1:
             # save all the matching base chunks
-            matching_base_chunks.append(base[base_index])
-            matching_comp_chunks.append(h[0])
+            matching_base_chunks.append(base[base_index])  # hash and time so we can sort
+            matching_comp_chunks.append(h[0])  # just the hash
 
     # return float(len(matching_base_chunks)) / float(len(comp))  # with this, i get far too high matches on the other
     # audio file
