@@ -145,7 +145,6 @@ def match_rate(base: list[tuple[str, int]], comp: list[tuple[str, int]]) -> floa
     # compare if they are in the same order as the new track
     matching_chunks = float(0)
     last_comp_ind = 0
-    mbc_ind = 0
     for chunk in matching_comp_chunks:
         # Get the index of the base chunk and ensure it exists in ascending order
         try:
@@ -153,9 +152,9 @@ def match_rate(base: list[tuple[str, int]], comp: list[tuple[str, int]]) -> floa
             if mbc_ind > last_comp_ind:
                 # print(matching_comp_chunks[i], mbc_hashes[mbc_hashes.index(matching_comp_chunks[i])])
                 matching_chunks += 1
+            last_comp_ind = mbc_ind
         except:
             pass
-        last_comp_ind = mbc_ind
 
     return matching_chunks / float(len(comp))
 
