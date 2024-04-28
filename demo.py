@@ -38,7 +38,7 @@ def extract_peak_frequency_in_range(data, sampling_rate, low, high):
 
 # Break into chunks
 ranges = [40, 80, 120, 180, 300, 600, 800]
-spread = 10
+spread = 6
 
 
 def get_file_peaks(file_path: str) -> list[tuple[int, int, int, int]]:
@@ -175,14 +175,14 @@ middle_hashes = hash_peaks(middle_peaks, spread)
 print("total hashes:", len(middle_hashes))
 middle_hash_list = list(map(lambda x: x[0], middle_hashes))
 
-print("middle middle match:", match_rate(base_hashes, middle_hashes))
+print("middle match:", match_rate(base_hashes, middle_hashes))
 
 external_peaks = get_file_peaks('laptop-rec.wav')
 external_hashes = hash_peaks(external_peaks, spread)
 print("total hashes:", len(external_hashes))
 external_hash_list = list(map(lambda x: x[0], external_hashes))
 
-print("middle middle match:", match_rate(base_hashes, external_hashes))
+print("external match:", match_rate(base_hashes, external_hashes))
 
 other_peaks = get_file_peaks('other-audio.wav')
 other_hashes = hash_peaks(other_peaks, spread)
