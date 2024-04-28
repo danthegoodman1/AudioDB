@@ -170,8 +170,14 @@ small_hash_list = list(map(lambda x: x[0], small_hashes))
 
 print("small start match:", match_rate(base_hashes, small_hashes))
 
-# Compare an external recording (this is an iphone microphone recording the original audio from laptop speakers)
-external_peaks = get_file_peaks('f1-middle.wav')
+middle_peaks = get_file_peaks('f1-middle.wav')
+middle_hashes = hash_peaks(middle_peaks, spread)
+print("total hashes:", len(middle_hashes))
+middle_hash_list = list(map(lambda x: x[0], middle_hashes))
+
+print("middle middle match:", match_rate(base_hashes, middle_hashes))
+
+external_peaks = get_file_peaks('laptop-rec.wav')
 external_hashes = hash_peaks(external_peaks, spread)
 print("total hashes:", len(external_hashes))
 external_hash_list = list(map(lambda x: x[0], external_hashes))
