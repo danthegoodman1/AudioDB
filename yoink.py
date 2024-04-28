@@ -1,8 +1,10 @@
+# Lots pulled from https://github.com/worldveil/dejavu
+
 import fnmatch
 import os
 from hashlib import sha1
 from itertools import groupby
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Set
 
 import numpy as np
 from pydub import AudioSegment
@@ -87,17 +89,17 @@ DEFAULT_OVERLAP_RATIO = 0.5
 
 # Degree to which a fingerprint can be paired with its neighbors. Higher values will
 # cause more fingerprints, but potentially better accuracy.
-DEFAULT_FAN_VALUE = 5  # 15 was the original value.
+DEFAULT_FAN_VALUE = 15  # 15 was the original value.
 
 # Minimum amplitude in spectrogram in order to be considered a peak.
 # This can be raised to reduce number of fingerprints, but can negatively
 # affect accuracy.
-DEFAULT_AMP_MIN = 10
+DEFAULT_AMP_MIN = 2
 
 # Number of cells around an amplitude peak in the spectrogram in order
 # for Dejavu to consider it a spectral peak. Higher values mean less
 # fingerprints and faster matching, but can potentially affect accuracy.
-PEAK_NEIGHBORHOOD_SIZE = 10  # 20 was the original value.
+PEAK_NEIGHBORHOOD_SIZE = 20  # 20 was the original value.
 
 # Thresholds on how close or far fingerprints can be in time in order
 # to be paired as a fingerprint. If your max is too low, higher values of
@@ -368,11 +370,6 @@ def get_file_fingerprints(file_name: str, limit: int = None, print_output: bool 
 
         return fingerprints, file_hash
 
-fings = get_file_fingerprints('f1-drive_short.wav')
-ff = list(fings[0])
-ff.sort(key=lambda x: x[1])
-ff = list(map(lambda x: list(x), ff))
-
 def match_rate(base: list[tuple[str, int]], comp: list[tuple[str, int]]) -> float:
     matching_base_chunks = []
     matching_comp_chunks = []
@@ -446,20 +443,56 @@ def match_rate(base: list[tuple[str, int]], comp: list[tuple[str, int]]) -> floa
 #
 #     return songs_result
 
-other_fings = get_file_fingerprints('f1-middle.wav')
-of = list(other_fings[0])
-of = list(map(lambda x: list(x), of))
-print(match_rate(ff, of))
+def get_match(base: set, comp: set) -> float:
+    matching_base_chunks = []
+    matching_comp_chunks = []
+    for h in comp:
+        base_index = next((idx for (idx, b) in enumerate(base) if b[0] == h[0]), -1)
+        if base_index > -1:
+            # save all the matching base chunks
+            matching_base_chunks.append(base[base_index][0])
+            matching_comp_chunks.append(h[0])
 
-ff.sort(key=lambda x: (x[1], x[0]))
-of.sort(key=lambda x: (x[1], x[0]))
-print(ff[:10])
-print(of[:10])
+    # return float(len(matching_base_chunks)) / float(len(comp))  # with this, i get far too high matches on the other
+    # audio file
 
-indx = []
-for i in range(len(of)):
-    ff_ind = next((idx for (idx, b) in enumerate(ff) if b[0] == of[i][0]), -1)
-    if ff_ind > -1:
-        indx.append(ff_ind)
-# print(sorted(indx))
-print(len(of), len(indx))
+    # For each of them, make sure they are in the right order
+    matching_base_chunks.sort(key=lambda x: x[1])  # sort the matching by time
+    # compare if they are in the same order as the new track
+    matching_chunks = float(0)
+    last_comp_ind = 0
+    for i in range(len(matching_comp_chunks)):
+        # Get the index of the base chunk and ensure it exists in ascending order
+        try:
+            if matching_base_chunks.index(matching_comp_chunks[i]) > last_comp_ind:
+                # print(matching_comp_chunks[i], matching_base_chunks[matching_base_chunks.index(matching_comp_chunks[i])])
+                matching_chunks += 1
+        except:
+            pass
+        last_comp_ind = i
+
+    return matching_chunks / float(len(comp))
+
+fings, _ = get_file_fingerprints('f1-drive_short.wav')
+# ff = list(fings[0])
+# ff.sort(key=lambda x: x[1])
+# ff = list(map(lambda x: list(x), ff))
+
+short_fings, _ = get_file_fingerprints('laptop-rec.wav')
+print(get_match(list(fings), list(short_fings)))
+
+other_fings, _ = get_file_fingerprints('other-audio.wav')
+print(get_match(list(fings), list(other_fings)))
+
+# ff.sort(key=lambda x: (x[1], x[0]))
+# of.sort(key=lambda x: (x[1], x[0]))
+# print(ff[:10])
+# print(of[:10])
+#
+# indx = []
+# for i in range(len(of)):
+#     ff_ind = next((idx for (idx, b) in enumerate(ff) if b[0] == of[i][0]), -1)
+#     if ff_ind > -1:
+#         indx.append(ff_ind)
+# # print(sorted(indx))
+# print(len(of), len(indx))
